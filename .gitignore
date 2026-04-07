@@ -1,0 +1,12 @@
+node_modules
+dist
+.vercel
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+
+# Local-only reference material — not for the public repo
+data.pdf
+Claude-Morse code connection platform architecture.md
