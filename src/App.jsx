@@ -193,14 +193,12 @@ export default function App() {
             onToggle={setOnline}
             disabled={connectionState !== 'connected'}
           />
-          {online && (
-            <UserList
-              users={members}
-              me={callsign}
-              onConnect={handleConnectClick}
-              busy={!!outgoing}
-            />
-          )}
+          <UserList
+            users={members}
+            me={callsign}
+            onConnect={handleConnectClick}
+            busy={!!outgoing}
+          />
         </>
       )}
 

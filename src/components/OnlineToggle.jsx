@@ -9,7 +9,7 @@ export default function OnlineToggle({ online, onToggle, disabled }) {
         <div className="muted" style={{ marginTop: '0.3rem' }}>
           {online
             ? 'Other users can see your callsign and request to connect.'
-            : 'Toggle on to appear in the user list.'}
+            : "You can browse who's online, but you won't appear in their list."}
         </div>
       </div>
       <button

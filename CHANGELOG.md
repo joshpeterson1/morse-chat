@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Vercel Analytics: `@vercel/analytics` dependency, `<Analytics />` mounted in `src/main.jsx` alongside `<App />`. Enable in the Vercel project dashboard for the data to start flowing.
+
+### Changed
+- Lobby user list is now visible regardless of the user's own online state. The "Appear online" toggle still controls whether *you* show up to others, but you can browse who's online and initiate connection requests without first making yourself visible. `OnlineToggle` copy updated to reflect this.
+
 ### Fixed
 - **`Set PinCfg` and `Set WinKeyer Mode` no longer clobber unrelated bits.** The K1EL protocol writes the entire byte for both registers and offers no register read-back, so the previous live setters were silently zeroing hang time, ultimatic priority, paddle swap, autospace, contest spacing, and the paddle watchdog disable bit on every toggle. The settings object now tracks the **full** state of both registers; `computeModeRegister()` and `computePinConfig()` build the byte from every field. Defaults mirror the working reference at `newqrzframe/public/wkusb-manager.js` (`defaultModeRegister = 0x50`, `defaultPinConfig = 0x06`); a default-state round-trip produces exactly those bytes. Bits 6 (paddle echoback ON) and 2 (serial echoback OFF) of the mode register remain forced because they're load-bearing for the chat→pair routing model.
 
