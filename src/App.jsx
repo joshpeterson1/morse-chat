@@ -18,6 +18,7 @@ import OutgoingRequest from './components/OutgoingRequest.jsx';
 import ChatView from './components/ChatView.jsx';
 import WkusbBar from './components/WkusbBar.jsx';
 import WkusbSettings from './components/WkusbSettings.jsx';
+import SoloMode from './components/SoloMode.jsx';
 
 export default function App() {
   const [callsign, setCallsign] = useCallsign();
@@ -36,6 +37,7 @@ export default function App() {
 
   const [outgoing, setOutgoing] = useState(null); // callsign we're requesting
   const [pairedWith, setPairedWith] = useState(null);
+  const [soloMode, setSoloMode] = useState(false);
 
   const onRemoteDisconnect = useCallback(() => {
     setPairedWith(null);
@@ -129,6 +131,7 @@ export default function App() {
     setOnline(false);
     setPairedWith(null);
     setOutgoing(null);
+    setSoloMode(false);
     setCallsign('');
   }
 
@@ -186,6 +189,12 @@ export default function App() {
           onDisconnect={handleEndChat}
           wkusbConnected={wkusb.connected}
         />
+      ) : soloMode ? (
+        <SoloMode
+          me={callsign}
+          wkusbConnected={wkusb.connected}
+          onExit={() => setSoloMode(false)}
+        />
       ) : (
         <>
           <OnlineToggle
@@ -193,6 +202,23 @@ export default function App() {
             onToggle={setOnline}
             disabled={connectionState !== 'connected'}
           />
+          <div className="card online-toggle">
+            <div>
+              <strong>Solo: CQ POTA</strong>
+              <div className="muted" style={{ marginTop: '0.3rem' }}>
+                {wkusb.connected
+                  ? 'Practice POTA exchanges against random activators when nobody is around.'
+                  : 'Connect your WKUSB above to practice POTA exchanges solo.'}
+              </div>
+            </div>
+            <button
+              className="primary"
+              onClick={() => setSoloMode(true)}
+              disabled={!wkusb.connected}
+            >
+              Start solo
+            </button>
+          </div>
           <UserList
             users={members}
             me={callsign}

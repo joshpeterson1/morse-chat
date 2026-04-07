@@ -179,6 +179,42 @@ let reader = null;
 let writer = null;
 let readLoopPromise = null;
 
+// Serialized write chain. Every write to the device goes through this
+// chain so that two callers (e.g. SoloMode keying the station's call AND
+// SoloMode keying its repeat) can never have overlapping `writer.write()`
+// promises in flight. Without this, rapid back-to-back sends were causing
+// bytes to be dropped or interleaved on the K1EL — symptom: subsequent
+// writes silently no-oped on the device side.
+let writeChain = Promise.resolve();
+function enqueueWrite(bytes, label) {
+  // Debug log so issues like "I don't hear the call but the transcript
+  // shows it" can be diagnosed from the dev console without having to
+  // sniff the serial port. Shows label, byte count, and the bytes as a
+  // hex string + ASCII rendering.
+  const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join(' ');
+  const asAscii = Array.from(bytes)
+    .map((b) => (b >= 0x20 && b <= 0x7E ? String.fromCharCode(b) : `\\x${b.toString(16).padStart(2, '0')}`))
+    .join('');
+  console.log(`[wkusb] enqueueWrite ${label} ${bytes.length}B  ${hex}  "${asAscii}"`);
+
+  writeChain = writeChain
+    .catch(() => {}) // swallow upstream errors so the chain stays alive
+    .then(() => {
+      if (!writer) {
+        console.warn(`[wkusb] enqueueWrite ${label}: writer is null at execution time`);
+        return undefined;
+      }
+      return writer.write(bytes);
+    })
+    .then(() => {
+      console.log(`[wkusb] enqueueWrite ${label}: write resolved`);
+    })
+    .catch((err) => {
+      console.error(`[wkusb] write error (${label})`, err);
+    });
+  return writeChain;
+}
+
 let connected = false;
 let busy = false;
 let expectingRevision = false;
@@ -202,6 +238,26 @@ export function isBusy() {
 export function onChar(cb) {
   charListeners.add(cb);
   return () => charListeners.delete(cb);
+}
+
+// Returns a promise that resolves the next time the device transitions to
+// idle (busy = false). If the device is already idle, resolves immediately.
+//
+// This is the ONLY way to safely time a station response while the operator
+// is keying on the paddle: we cannot interrupt them from software (the K1EL
+// gives paddle input priority and clears its serial buffer when break-in
+// occurs, per the spec), so we have to wait until they stop, then write.
+// Status bytes from the device flip the busy flag in processStatusByte().
+export function whenIdle() {
+  if (!busy) return Promise.resolve();
+  return new Promise((resolve) => {
+    const unsubscribe = onState((state) => {
+      if (state === 'idle') {
+        unsubscribe();
+        resolve();
+      }
+    });
+  });
 }
 
 // Subscribe to high-level state changes ('connected' | 'disconnected'
@@ -287,9 +343,7 @@ export function sendChar(ch) {
   if (typeof ch !== 'string' || ch.length === 0) return;
   const code = ch.toUpperCase().charCodeAt(0);
   if (code < 0x20 || code > 0x7E) return;
-  writer.write(new Uint8Array([code])).catch((err) => {
-    console.error('[wkusb] write error', err);
-  });
+  enqueueWrite(new Uint8Array([code]), 'sendChar');
 }
 
 // Send a string. Same filtering rules as sendChar.
@@ -303,18 +357,67 @@ export function sendText(text) {
     if (c >= 0x20 && c <= 0x7E) bytes.push(c);
   }
   if (bytes.length === 0) return;
-  writer.write(new Uint8Array(bytes)).catch((err) => {
-    console.error('[wkusb] write error', err);
-  });
+  enqueueWrite(new Uint8Array(bytes), 'sendText');
+}
+
+// Send two characters fused into a single prosign via Merge Letters
+// (Buffered Cmd 0x1B XY per K1EL WK3 spec, page 17 of data.pdf). The device
+// holds the command until both bytes have arrived, then keys the pair with
+// no inter-character space — e.g. sendProsign('B','K') keys as the BK
+// prosign rather than B then K. Used by the solo CQ POTA responder, which
+// occasionally collapses BK into a prosign for flavor.
+//
+// Both args must be a single printable ASCII character; non-conforming
+// inputs are dropped silently to match sendChar's behavior.
+export function sendProsign(a, b) {
+  if (!connected || !writer) return;
+  if (typeof a !== 'string' || a.length !== 1) return;
+  if (typeof b !== 'string' || b.length !== 1) return;
+  const ca = a.toUpperCase().charCodeAt(0);
+  const cb = b.toUpperCase().charCodeAt(0);
+  if (ca < 0x20 || ca > 0x7E) return;
+  if (cb < 0x20 || cb > 0x7E) return;
+  enqueueWrite(new Uint8Array([0x1B, ca, cb]), 'sendProsign');
+}
+
+// Compose a transmission from a mixed list of plain-text strings and
+// prosign objects, e.g.:
+//   sendMessage(['BK FB ES TU ', { prosign: 'AR' }, ' KK7QAS'])
+// Strings are filtered the same way sendText filters; prosign objects must
+// have a 2-character `prosign` field. Anything else in the array is skipped.
+//
+// All bytes are buffered into a single write so the device sees them in
+// order without inter-write reordering risk.
+export function sendMessage(parts) {
+  if (!connected || !writer) return;
+  if (!Array.isArray(parts) || parts.length === 0) return;
+  const bytes = [];
+  for (const part of parts) {
+    if (typeof part === 'string') {
+      const upper = part.toUpperCase();
+      for (let i = 0; i < upper.length; i++) {
+        const c = upper.charCodeAt(i);
+        if (c >= 0x20 && c <= 0x7E) bytes.push(c);
+      }
+      continue;
+    }
+    if (part && typeof part === 'object' && typeof part.prosign === 'string' && part.prosign.length === 2) {
+      const ca = part.prosign.charCodeAt(0);
+      const cb = part.prosign.charCodeAt(1);
+      if (ca >= 0x20 && ca <= 0x7E && cb >= 0x20 && cb <= 0x7E) {
+        bytes.push(0x1B, ca, cb);
+      }
+    }
+  }
+  if (bytes.length === 0) return;
+  enqueueWrite(new Uint8Array(bytes), 'sendMessage');
 }
 
 // Abort whatever the keyer is currently sending. Useful when the operator
 // wants to cut off a long buffered string.
 export function clearBuffer() {
   if (!connected || !writer) return;
-  writer.write(new Uint8Array([0x0A])).catch((err) => {
-    console.error('[wkusb] clearBuffer error', err);
-  });
+  enqueueWrite(new Uint8Array([0x0A]), 'clearBuffer');
 }
 
 // ─── Settings (live, mutable, persisted) ───────────────────────────────────
