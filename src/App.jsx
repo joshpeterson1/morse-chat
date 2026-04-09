@@ -36,6 +36,7 @@ export default function App() {
 
   const [outgoing, setOutgoing] = useState(null); // callsign we're requesting
   const [pairedWith, setPairedWith] = useState(null);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const onRemoteDisconnect = useCallback(() => {
     setPairedWith(null);
@@ -148,21 +149,38 @@ export default function App() {
       <div className="app-header">
         <h1>somber's morse chat</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <button
+            type="button"
+            className={`help-toggle${helpOpen ? ' active' : ''}`}
+            onClick={() => setHelpOpen((v) => !v)}
+            aria-pressed={helpOpen}
+            aria-label={helpOpen ? 'Hide tips' : 'Show tips'}
+            title={helpOpen ? 'Hide tips' : 'Show tips'}
+          >
+            ?
+          </button>
           <span className="callsign-tag">{callsign}</span>
           <span className="connection-status">{connectionState}</span>
           <button onClick={handleSignOut}>Sign out</button>
         </div>
       </div>
 
-      <WkusbBar
-        supported={wkusb.supported}
-        connected={wkusb.connected}
-        connecting={wkusb.connecting}
-        busy={wkusb.busy}
-        error={wkusb.error}
-        onConnect={wkusb.connect}
-        onDisconnect={wkusb.disconnect}
-      />
+      <div className="hinted-section">
+        {helpOpen && (
+          <p className="hint-handwritten">
+            First, connect your WK3 device and change any settings you need
+          </p>
+        )}
+        <WkusbBar
+          supported={wkusb.supported}
+          connected={wkusb.connected}
+          connecting={wkusb.connecting}
+          busy={wkusb.busy}
+          error={wkusb.error}
+          onConnect={wkusb.connect}
+          onDisconnect={wkusb.disconnect}
+        />
+      </div>
 
       {wkusb.supported && (
         <WkusbSettings
@@ -188,17 +206,46 @@ export default function App() {
         />
       ) : (
         <>
-          <OnlineToggle
-            online={online}
-            onToggle={setOnline}
-            disabled={connectionState !== 'connected'}
-          />
-          <UserList
-            users={members}
-            me={callsign}
-            onConnect={handleConnectClick}
-            busy={!!outgoing}
-          />
+          <div className="hinted-section">
+            {helpOpen && (
+              <p className="hint-handwritten">
+                Go online when you're ready to chat
+              </p>
+            )}
+            <OnlineToggle
+              online={online}
+              onToggle={setOnline}
+              disabled={connectionState !== 'connected'}
+            />
+          </div>
+          <div className="hinted-section">
+            {helpOpen && (
+              <p className="hint-handwritten">
+                Other online users will show here
+              </p>
+            )}
+            <UserList
+              users={members}
+              me={callsign}
+              onConnect={handleConnectClick}
+              busy={!!outgoing}
+            />
+          </div>
+          {helpOpen && (
+            <p className="hint-handwritten">
+              Notes: This built and tested around the{' '}
+              <a
+                href="https://www.k1elsystems.com/WKUSB_AF.html"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                WKUSB-AF &amp; CPO
+              </a>
+              . If you have a different WK3 device, it may still work, but you
+              will need a radio attached to hear keying. Make{' '}
+              <em>sure</em> that you are not PTTing your radio as well.
+            </p>
+          )}
         </>
       )}
 
