@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Vercel Analytics: `@vercel/analytics` dependency, `<Analytics />` mounted in `src/main.jsx` alongside `<App />`. Enable in the Vercel project dashboard for the data to start flowing.
 
+### Fixed
+- **Paddle keying did nothing on one side of a two-way test.** Root cause: `connect()` was only sending Admin Host Open and trusting the device's standalone EEPROM Mode register, but Mode bit 6 (paddle echoback) was off in one operator's hardware — so paddle bytes never echoed back to the host, the read loop never saw them, and `onChar` never fired. Keyboard typing still worked because it bypasses the read path. Fix: `connect()` now pushes a fixed init sequence after Host Open — Admin Set WK3 Mode (`00 14`), PinCfg `09 02` (sidetone on, all key outputs and PTT off), and Mode register `0E 50` (paddle echo on, iambic A, serial echo off, all else off). The bytes are intentionally hardcoded (not derived from `settings`) so the routing-critical bits are guaranteed regardless of stale localStorage. Reverses the prior "minimal connect" policy from the previous Unreleased Removed entry. `defaultSettings.keyOut2Enabled` flipped from `true` → `false` so `computePinConfig()` defaults match the new init byte.
+
 ### Changed
 - Lobby user list is now visible regardless of the user's own online state. The "Appear online" toggle still controls whether *you* show up to others, but you can browse who's online and initiate connection requests without first making yourself visible. `OnlineToggle` copy updated to reflect this.
 

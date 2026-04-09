@@ -22,8 +22,23 @@
 // ─── Protocol constants ────────────────────────────────────────────────────
 
 // Admin commands (always prefixed with 0x00).
-const ADMIN_HOST_OPEN  = new Uint8Array([0x00, 0x02]);
-const ADMIN_HOST_CLOSE = new Uint8Array([0x00, 0x03]);
+const ADMIN_HOST_OPEN     = new Uint8Array([0x00, 0x02]);
+const ADMIN_HOST_CLOSE    = new Uint8Array([0x00, 0x03]);
+const ADMIN_SET_WK3_MODE  = new Uint8Array([0x00, 0x14]); // admin 20
+
+// Fixed init bytes pushed after Host Open (per user spec 2026-04-08). These
+// are intentionally hardcoded — NOT derived from `settings` — so the
+// routing-critical bits (Mode bit 6 paddle echo on, bit 2 serial echo off)
+// are guaranteed regardless of the device's standalone EEPROM state or any
+// stale value in the user's localStorage. The settings panel can still
+// change these registers afterwards via the per-setter commands.
+//   PinCfg 0x02 = sidetone on, all key outputs and PTT off, hang time 0,
+//                 ultimatic priority normal.
+//   Mode   0x50 = paddle watchdog enabled, paddle echoback ON, iambic A,
+//                 paddle swap off, serial echoback OFF, autospace off,
+//                 contest spacing off.
+const INIT_PIN_CFG  = new Uint8Array([0x09, 0x02]);
+const INIT_MODE_REG = new Uint8Array([0x0E, 0x50]);
 
 // ─── Mode register layout (Set WinKeyer Mode, command 0x0E) ───────────────
 //
@@ -84,11 +99,11 @@ const MAX_SIDETONE_HZ = 1500;
 // localStorage key for settings persistence.
 const SETTINGS_KEY = 'morseChat.wkusbSettings';
 
-// Default settings — mirror the reference implementation
-// (newqrzframe/public/wkusb-manager.js) which is known-good on this user's
-// hardware. With these values, computeModeRegister() === 0x50 and
-// computePinConfig() === 0x06 — same bytes the reference's Load Defaults
-// pushes at connect.
+// Default settings — chosen so the computed bytes exactly match the fixed
+// init writes connect() pushes (INIT_PIN_CFG = 0x02, INIT_MODE_REG = 0x50).
+// Keeping defaults aligned means a fresh user starts with the host snapshot
+// and the device state in agreement; existing localStorage may still drift
+// from the device after init until the user touches a setting.
 function defaultSettings() {
   return {
     // Speed
@@ -109,7 +124,7 @@ function defaultSettings() {
     ultimaticPriority: 'normal', // bits 7,6
     hangTime: 0,                  // bits 5,4 (0..3)
     keyOut1Enabled: false,        // bit 3
-    keyOut2Enabled: true,         // bit 2
+    keyOut2Enabled: false,        // bit 2 — matches INIT_PIN_CFG (0x02)
     sidetoneEnabled: true,        // bit 1
     pttEnabled: false,            // bit 0
   };
@@ -242,12 +257,20 @@ export async function connect() {
 
   try {
     await writer.write(ADMIN_HOST_OPEN);
-    // Brief settle so the device emits the revision code before we hand off
-    // to the user. We deliberately push NO init defaults here — the device
-    // keeps whatever settings it had standalone, and the user's saved
-    // values only get pushed when they actively change a control in the
-    // settings panel.
+    // Brief settle so the device emits the revision code (which the read
+    // loop discards via expectingRevision) before we send any further
+    // commands.
     await sleep(150);
+
+    // Bring-up sequence (per user spec 2026-04-08): switch to WK3 mode,
+    // then push a known-good PinCfg and Mode register so the chat→pair
+    // routing model is guaranteed regardless of EEPROM standalone state.
+    // The previous policy of "minimal connect, push nothing" left paddle
+    // echoback at the mercy of the device's standalone Mode register and
+    // surfaced as a bug where one operator's keying never reached the host.
+    await writer.write(ADMIN_SET_WK3_MODE);
+    await writer.write(INIT_PIN_CFG);
+    await writer.write(INIT_MODE_REG);
 
     connected = true;
     emitState('connected');
