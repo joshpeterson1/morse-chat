@@ -7,6 +7,13 @@ const KEY_MODE_OPTIONS = [
   { value: 'bug',       label: 'Bug' },
 ];
 
+const SIDETONE_VOLUME_OPTIONS = [
+  { value: 1, label: '1 (low)' },
+  { value: 2, label: '2' },
+  { value: 3, label: '3' },
+  { value: 4, label: '4 (high)' },
+];
+
 export default function WkusbSettings({
   connected,
   settings,
@@ -14,8 +21,8 @@ export default function WkusbSettings({
   onMaxWpmChange,
   onSidetoneEnabledChange,
   onSidetoneHzChange,
+  onSidetoneVolumeChange,
   onKeyModeChange,
-  onPttEnabledChange,
 }) {
   const [open, setOpen] = useState(false);
 
@@ -120,17 +127,27 @@ export default function WkusbSettings({
             />
           </div>
 
-          <div className="settings-row inline">
-            <label htmlFor="wkusb-ptt">
-              <input
-                id="wkusb-ptt"
-                type="checkbox"
-                checked={settings.pttEnabled}
-                onChange={(e) => onPttEnabledChange(e.target.checked)}
-              />
-              PTT enable (transmit on radio)
+          <div className="settings-row">
+            <label htmlFor="wkusb-sidetone-volume">
+              Sidetone volume
+              <span className="value-tag">
+                {SIDETONE_VOLUME_OPTIONS.find((o) => o.value === settings.sidetoneVolume)?.label ?? settings.sidetoneVolume}
+              </span>
             </label>
+            <select
+              id="wkusb-sidetone-volume"
+              value={settings.sidetoneVolume}
+              disabled={!settings.sidetoneEnabled}
+              onChange={(e) => onSidetoneVolumeChange(parseInt(e.target.value, 10))}
+            >
+              {SIDETONE_VOLUME_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
+
         </div>
       )}
     </div>

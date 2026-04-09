@@ -35,9 +35,8 @@ export default function ChatView({
   }, [messages]);
 
   // Play any new "them" messages on the local WKUSB so the operator hears
-  // their partner's keying as Morse on the sidetone (or transmits it, if
-  // PTT is enabled in PinCfg). The cursor only advances forward, so a
-  // message is never re-played.
+  // their partner's keying as Morse on the sidetone. The cursor only
+  // advances forward, so a message is never re-played.
   useEffect(() => {
     if (!wkusbConnected) {
       // If the device isn't connected, advance the cursor anyway so we

@@ -83,6 +83,21 @@ const ULTIMATIC_BITS = {
   dit:    0x80,
 };
 
+// Set Sidetone Volume — admin command 25 (decimal). The K1EL convention is
+// that the manual's decimal label number IS the hex command byte (so "20:
+// Set WK3 Mode" → 0x14 because 20 dec = 0x14 hex). The manual entry for
+// this command reads `25: Set Sidetone Volume <00><24><n>`, but the `<24>`
+// is a TYPO — the author wrote the decimal command number where the hex
+// byte should be. The actual wire byte is `0x19` (= 25 decimal), confirmed
+// 2026-04-08 by cross-referencing every other command in our code against
+// the same convention. Sending `0x24` (the typo'd byte) errored the device
+// twice in earlier tests; that's command Get LMOD or thereabouts on K1EL,
+// not the volume command.
+//
+// `n` = 0x01 (low) … 0x04 (high). The intermediate values 0x02 and 0x03
+// are valid steps, so the UI exposes the full 1..4 range.
+const VALID_SIDETONE_VOLUMES = new Set([1, 2, 3, 4]);
+
 
 
 
@@ -91,10 +106,13 @@ const ULTIMATIC_BITS = {
 const MIN_WPM = 5;
 const MAX_WPM = 99;
 
-// Sidetone frequency range exposed by the UI. WK3 mode is continuously
-// adjustable in the 500–4000 Hz band; the byte value is 62500/freq_hz.
+// Sidetone frequency range exposed by the UI — full WK3 continuous range
+// per the WinKeyer 3 datasheet (500–4000 Hz). The byte value is
+// 62500/freq_hz; in WK3 all 8 bits are used (the WK1/WK2 paddle-only
+// sidetone bit is relocated to the X2MODE register so the MSB is now part
+// of the frequency).
 const MIN_SIDETONE_HZ = 500;
-const MAX_SIDETONE_HZ = 1500;
+const MAX_SIDETONE_HZ = 4000;
 
 // localStorage key for settings persistence.
 const SETTINGS_KEY = 'morseChat.wkusbSettings';
@@ -113,6 +131,10 @@ function defaultSettings() {
     // Sidetone freq (Sidetone Control 0x01 nn)
     sidetoneHz: 553, // ~ 0x71
 
+    // Sidetone volume level 1..4 (Set Sidetone Volume 00 19 nn). Default
+    // mid-range; the user can crank to 4 or drop to 1 from the panel.
+    sidetoneVolume: 3,
+
     // ── Mode register fields (computed into Set Mode 0E nn) ──
     keyMode: 'iambicA',     // bits 5,4 → 0x10
     paddleSwap: false,      // bit 3
@@ -126,7 +148,7 @@ function defaultSettings() {
     keyOut1Enabled: false,        // bit 3
     keyOut2Enabled: false,        // bit 2 — matches INIT_PIN_CFG (0x02)
     sidetoneEnabled: true,        // bit 1
-    pttEnabled: false,            // bit 0
+    // bit 0 (PTT) is always 0 — no UI control, no setter.
   };
 }
 
@@ -351,6 +373,7 @@ export function getSettings() {
     wpm: settings.wpm,
     maxWpm: settings.maxWpm,
     sidetoneHz: settings.sidetoneHz,
+    sidetoneVolume: settings.sidetoneVolume,
     // Mode register
     keyMode: settings.keyMode,
     paddleSwap: settings.paddleSwap,
@@ -363,7 +386,6 @@ export function getSettings() {
     keyOut1Enabled: settings.keyOut1Enabled,
     keyOut2Enabled: settings.keyOut2Enabled,
     sidetoneEnabled: settings.sidetoneEnabled,
-    pttEnabled: settings.pttEnabled,
     // Bounds for UI sliders
     minWpm: MIN_WPM,
     protocolMaxWpm: MAX_WPM,
@@ -398,13 +420,19 @@ export function setSidetoneEnabled(enabled) {
   applyPinConfig();
 }
 
-export function setPttEnabled(enabled) {
-  const next = !!enabled;
-  if (next === settings.pttEnabled) return;
-  settings.pttEnabled = next;
+export function setSidetoneVolume(level) {
+  const lvl = level | 0;
+  if (!VALID_SIDETONE_VOLUMES.has(lvl)) return;
+  if (lvl === settings.sidetoneVolume) return;
+  settings.sidetoneVolume = lvl;
   saveSettings();
   emitSettings();
-  applyPinConfig();
+  if (connected && writer) {
+    // Set Sidetone Volume: admin command 25 = wire bytes `00 19 nn` (NOT
+    // `00 24 nn` — the manual entry has a typo, see VALID_SIDETONE_VOLUMES
+    // comment above for the full story).
+    writeSafely(new Uint8Array([0x00, 0x19, lvl]), 'setSidetoneVolume');
+  }
 }
 
 export function setSidetoneHz(hz) {
@@ -479,8 +507,7 @@ function computePinConfig() {
   if (settings.keyOut2Enabled) cfg |= 0x04;
   // bit 1: sidetone
   if (settings.sidetoneEnabled) cfg |= 0x02;
-  // bit 0: PTT
-  if (settings.pttEnabled) cfg |= 0x01;
+  // bit 0 (PTT) is intentionally always 0 — no UI control.
   return cfg;
 }
 

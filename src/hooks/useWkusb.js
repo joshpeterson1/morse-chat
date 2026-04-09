@@ -12,8 +12,8 @@ import {
   setMaxWpm as wkusbSetMaxWpm,
   setSidetoneEnabled as wkusbSetSidetoneEnabled,
   setSidetoneHz as wkusbSetSidetoneHz,
+  setSidetoneVolume as wkusbSetSidetoneVolume,
   setKeyMode as wkusbSetKeyMode,
-  setPttEnabled as wkusbSetPttEnabled,
 } from '../lib/wkusb.js';
 
 // React-side wrapper around the singleton wkusb module. Tracks connection
@@ -96,7 +96,7 @@ export function useWkusb() {
     setMaxWpm: wkusbSetMaxWpm,
     setSidetoneEnabled: wkusbSetSidetoneEnabled,
     setSidetoneHz: wkusbSetSidetoneHz,
+    setSidetoneVolume: wkusbSetSidetoneVolume,
     setKeyMode: wkusbSetKeyMode,
-    setPttEnabled: wkusbSetPttEnabled,
   };
 }

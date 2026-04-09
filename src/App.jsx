@@ -172,8 +172,8 @@ export default function App() {
           onMaxWpmChange={wkusb.setMaxWpm}
           onSidetoneEnabledChange={wkusb.setSidetoneEnabled}
           onSidetoneHzChange={wkusb.setSidetoneHz}
+          onSidetoneVolumeChange={wkusb.setSidetoneVolume}
           onKeyModeChange={wkusb.setKeyMode}
-          onPttEnabledChange={wkusb.setPttEnabled}
         />
       )}
 
