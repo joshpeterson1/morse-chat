@@ -42,7 +42,7 @@ export default function WkusbSettings({
         <div className="settings-body">
           {!connected && (
             <div className="muted" style={{ marginBottom: '0.6rem' }}>
-              Not connected — changes are saved and applied on next connect.
+              Connect a device to change settings — values are read live from the keyer's EEPROM.
             </div>
           )}
 
@@ -58,6 +58,7 @@ export default function WkusbSettings({
               max={settings.maxWpm}
               step={1}
               value={settings.wpm}
+              disabled={!connected}
               onChange={(e) => onWpmChange(parseInt(e.target.value, 10))}
             />
           </div>
@@ -74,6 +75,7 @@ export default function WkusbSettings({
               max={settings.protocolMaxWpm}
               step={1}
               value={settings.maxWpm}
+              disabled={!connected}
               onChange={(e) => onMaxWpmChange(parseInt(e.target.value, 10))}
             />
           </div>
@@ -88,6 +90,7 @@ export default function WkusbSettings({
             <select
               id="wkusb-key-mode"
               value={settings.keyMode}
+              disabled={!connected}
               onChange={(e) => onKeyModeChange(e.target.value)}
             >
               {KEY_MODE_OPTIONS.map((opt) => (
@@ -104,6 +107,7 @@ export default function WkusbSettings({
                 id="wkusb-sidetone"
                 type="checkbox"
                 checked={settings.sidetoneEnabled}
+                disabled={!connected}
                 onChange={(e) => onSidetoneEnabledChange(e.target.checked)}
               />
               Sidetone audio
@@ -122,7 +126,7 @@ export default function WkusbSettings({
               max={settings.maxSidetoneHz}
               step={10}
               value={settings.sidetoneHz}
-              disabled={!settings.sidetoneEnabled}
+              disabled={!connected || !settings.sidetoneEnabled}
               onChange={(e) => onSidetoneHzChange(parseInt(e.target.value, 10))}
             />
           </div>
@@ -137,7 +141,7 @@ export default function WkusbSettings({
             <select
               id="wkusb-sidetone-volume"
               value={settings.sidetoneVolume}
-              disabled={!settings.sidetoneEnabled}
+              disabled={!connected || !settings.sidetoneEnabled}
               onChange={(e) => onSidetoneVolumeChange(parseInt(e.target.value, 10))}
             >
               {SIDETONE_VOLUME_OPTIONS.map((opt) => (
