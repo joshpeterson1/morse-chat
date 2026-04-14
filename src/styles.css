@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Just+Another+Hand&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Just+Another+Hand&display=swap');
 
 :root {
   color-scheme: dark;
@@ -13,7 +13,7 @@
   --good: #3fb950;
   --bad: #f85149;
   --warn: #d29922;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 * {
@@ -103,7 +103,7 @@ input[type='text']:focus {
 }
 
 .callsign-tag {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   background: var(--bg-elev-2);
   border: 1px solid var(--border);
   padding: 0.25rem 0.6rem;
@@ -239,7 +239,7 @@ input[type='text']:focus {
 }
 
 .value-tag {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.8rem;
   color: var(--fg-dim);
   background: var(--bg-elev-2);
@@ -341,7 +341,7 @@ input[type='text']:focus {
   background: var(--bg-elev-2);
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .modal-overlay {
@@ -396,7 +396,7 @@ input[type='text']:focus {
   padding: 0.8rem;
   height: 280px;
   overflow-y: auto;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.95rem;
   white-space: pre-wrap;
   line-height: 1.5;
@@ -428,5 +428,5 @@ input[type='text']:focus {
 .connection-status {
   font-size: 0.8rem;
   color: var(--fg-dim);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
