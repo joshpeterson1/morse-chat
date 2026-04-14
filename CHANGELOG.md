@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **App header title weight is now 400 (regular) instead of the browser-default bold.** `.app-header h1` in `src/styles.css` gains an explicit `font-weight: 400` to match the lighter look of IBM Plex Sans at display size.
 - **Primary UI font is now IBM Plex Sans; monospace font is JetBrains Mono.** `src/styles.css` Google Fonts `@import` extended to pull `IBM Plex Sans` (400/500/600/700) and `JetBrains Mono` (400/500/600) alongside the existing `Just Another Hand`. The `:root` sans-serif stack now leads with `'IBM Plex Sans'` before the system fallbacks, and every monospace declaration (body copy, chat input, message text, callsign tags, code spans) now leads with `'JetBrains Mono'` before `ui-monospace, SFMono-Regular, Menlo, monospace`.
 
 ### Fixed

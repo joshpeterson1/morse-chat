@@ -99,6 +99,7 @@ input[type='text']:focus {
 .app-header h1 {
   margin: 0;
   font-size: 1.4rem;
+  font-weight: 400;
   letter-spacing: 0.05em;
 }
 
