@@ -140,6 +140,7 @@ export default function App() {
           <h1>somber's morse chat</h1>
         </div>
         <CallsignEntry onSubmit={setCallsign} />
+        <SiteFooter />
       </div>
     );
   }
@@ -260,6 +261,23 @@ export default function App() {
       {outgoing && !pairedWith && (
         <OutgoingRequest to={outgoing} onCancel={handleCancelOutgoing} />
       )}
+
+      <SiteFooter />
     </div>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer className="site-footer">
+      <a
+        href="https://somber.dev"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="somber.dev"
+      >
+        -.- -.- --... --.- .- ...
+      </a>
+    </footer>
   );
 }

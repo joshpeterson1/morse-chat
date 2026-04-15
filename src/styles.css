@@ -96,6 +96,25 @@ input[type='text']:focus {
   padding-bottom: 1rem;
 }
 
+.site-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+}
+
+.site-footer a {
+  color: var(--fg-dim);
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  color: var(--fg);
+}
+
 .app-header h1 {
   margin: 0;
   font-size: 1.4rem;
